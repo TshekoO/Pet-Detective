@@ -20,6 +20,10 @@ function getStoredLeaderboard() {
   }
 }
 
+function leaderboardChanged(currentLeaderboard, nextLeaderboard) {
+  return JSON.stringify(currentLeaderboard) !== JSON.stringify(nextLeaderboard)
+}
+
 function App() {
   const [playerName, setPlayerName] = useState(() => {
     const savedName = localStorage.getItem(PLAYER_NAME_STORAGE_KEY)
@@ -124,6 +128,39 @@ function App() {
     })
 
   const topScorer = rankedLeaderboard[0]
+
+  useEffect(() => {
+    if (!isAdminUser) {
+      return
+    }
+
+    function refreshLeaderboardFromStorage() {
+      const nextLeaderboard = getStoredLeaderboard()
+
+      setLeaderboard((current) => {
+        if (!leaderboardChanged(current, nextLeaderboard)) {
+          return current
+        }
+
+        return nextLeaderboard
+      })
+    }
+
+    function handleStorageChange(event) {
+      if (event.key === LEADERBOARD_STORAGE_KEY) {
+        refreshLeaderboardFromStorage()
+      }
+    }
+
+    refreshLeaderboardFromStorage()
+    window.addEventListener('storage', handleStorageChange)
+    const syncTimer = window.setInterval(refreshLeaderboardFromStorage, 1500)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.clearInterval(syncTimer)
+    }
+  }, [isAdminUser])
 
   useEffect(() => {
     if (!playerName || isAdminUser || attempts === 0) {
