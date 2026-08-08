@@ -1,7 +1,24 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 
 const PLAYER_NAME_STORAGE_KEY = 'pet-detective-player-name'
+const LEADERBOARD_STORAGE_KEY = 'pet-detective-leaderboard'
+const ADMIN_NAME = 'Ogotlhe'
+
+function getStoredLeaderboard() {
+  const storedLeaderboard = localStorage.getItem(LEADERBOARD_STORAGE_KEY)
+
+  if (!storedLeaderboard) {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(storedLeaderboard)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
 
 function App() {
   const [playerName, setPlayerName] = useState(() => {
@@ -10,6 +27,7 @@ function App() {
   })
   const [nameInput, setNameInput] = useState('')
   const [loginError, setLoginError] = useState('')
+  const [leaderboard, setLeaderboard] = useState(() => getStoredLeaderboard())
 
   const employeeNames = [
     'Mpho Family',
@@ -85,6 +103,8 @@ function App() {
   const currentPet = petEntries[currentPetIndex]
   const currentFamilySlide = playerOptions[familySlideIndex]
 
+  const isAdminUser = playerName.toLowerCase() === ADMIN_NAME.toLowerCase()
+
   const score = petEntries.reduce((total, entry) => {
     return total + Number(resultsByPet[entry.id] === 'correct')
   }, 0)
@@ -92,6 +112,49 @@ function App() {
   const attempts = petEntries.reduce((total, entry) => {
     return total + Number(Boolean(resultsByPet[entry.id]))
   }, 0)
+
+  const rankedLeaderboard = [...leaderboard]
+    .filter((entry) => entry.name.toLowerCase() !== ADMIN_NAME.toLowerCase())
+    .sort((a, b) => {
+      if (b.bestScore !== a.bestScore) {
+        return b.bestScore - a.bestScore
+      }
+
+      return a.achievedAt - b.achievedAt
+    })
+
+  const topScorer = rankedLeaderboard[0]
+
+  useEffect(() => {
+    if (!playerName || isAdminUser || attempts === 0) {
+      return
+    }
+
+    setLeaderboard((current) => {
+      const existingEntry = current.find(
+        (entry) => entry.name.toLowerCase() === playerName.toLowerCase(),
+      )
+
+      const bestScore = existingEntry ? Math.max(existingEntry.bestScore, score) : score
+      const achievedAt =
+        !existingEntry || score > existingEntry.bestScore ? Date.now() : existingEntry.achievedAt
+
+      const updatedEntry = {
+        name: playerName,
+        bestScore,
+        completed: attempts === petEntries.length,
+        achievedAt,
+      }
+
+      const withoutCurrentUser = current.filter(
+        (entry) => entry.name.toLowerCase() !== playerName.toLowerCase(),
+      )
+
+      const nextLeaderboard = [...withoutCurrentUser, updatedEntry]
+      localStorage.setItem(LEADERBOARD_STORAGE_KEY, JSON.stringify(nextLeaderboard))
+      return nextLeaderboard
+    })
+  }, [attempts, isAdminUser, petEntries.length, playerName, score])
 
   function handleSelection(entryId, value) {
     setPreviewChoices((current) => ({ ...current, [entryId]: value }))
@@ -182,6 +245,51 @@ function App() {
     )
   }
 
+  if (isAdminUser) {
+    return (
+      <main className="page-shell">
+        <header className="hero-banner">
+          <p className="hero-kicker">Admin Portal</p>
+          <h1>User Leaderboard</h1>
+          <p className="hero-summary">
+            Rankings are ordered from highest score. The first user with the top score wins.
+          </p>
+          <div className="session-bar" role="status" aria-live="polite">
+            <span>Signed in as {playerName}</span>
+            <button type="button" className="logout-button" onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
+        </header>
+
+        <section className="leaderboard-panel" aria-label="User leaderboard">
+          {topScorer ? (
+            <p className="top-scorer-line">
+              1st Place: <strong>{topScorer.name}</strong> with <strong>{topScorer.bestScore}</strong>{' '}
+              / {petEntries.length}
+            </p>
+          ) : (
+            <p className="top-scorer-line">No user scores recorded yet.</p>
+          )}
+
+          {rankedLeaderboard.length ? (
+            <ol className="leaderboard-list">
+              {rankedLeaderboard.map((entry) => (
+                <li key={entry.name}>
+                  <span>{entry.name}</span>
+                  <span>
+                    {entry.bestScore} / {petEntries.length}
+                    {entry.completed ? ' (Complete)' : ' (In progress)'}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          ) : null}
+        </section>
+      </main>
+    )
+  }
+
   return (
     <main className="page-shell">
       <header className="hero-banner">
@@ -214,7 +322,7 @@ function App() {
           <ol>
             <li>Photos are submitted outside this app via email.</li>
             <li>The trickier the clues, the more fun the detective round.</li>
-            <li>The highest score wins the Pet Detective title.</li>
+            <li>The highest score 1st wins the Pet Detective title.</li>
           </ol>
         </article>
 
