@@ -142,6 +142,7 @@ function App() {
       const updatedEntry = {
         name: playerName,
         bestScore,
+        attempts,
         completed: attempts === petEntries.length,
         achievedAt,
       }
@@ -276,9 +277,32 @@ function App() {
             <ol className="leaderboard-list">
               {rankedLeaderboard.map((entry) => (
                 <li key={entry.name}>
-                  <span>{entry.name}</span>
-                  <span>
-                    {entry.bestScore} / {petEntries.length}
+                  <div className="leaderboard-row-top">
+                    <span className="leaderboard-name">{entry.name}</span>
+                    <span className="leaderboard-score">
+                      {entry.bestScore} / {petEntries.length}
+                    </span>
+                  </div>
+                  <div
+                    className="progress-track"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={petEntries.length}
+                    aria-valuenow={entry.attempts ?? 0}
+                    aria-label={`${entry.name} selection progress`}
+                  >
+                    <span
+                      className="progress-fill"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          Math.max(0, ((entry.attempts ?? 0) / petEntries.length) * 100),
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="progress-caption">
+                    {entry.attempts ?? 0} / {petEntries.length} selections
                     {entry.completed ? ' (Complete)' : ' (In progress)'}
                   </span>
                 </li>
