@@ -112,13 +112,6 @@ function App() {
     }))
   }
 
-  function handleReset() {
-    setPreviewChoices(Object.fromEntries(petEntries.map((entry) => [entry.id, ''])))
-    setResultsByPet(Object.fromEntries(petEntries.map((entry) => [entry.id, ''])))
-    setCurrentPetIndex(0)
-    setFamilySlideIndex(0)
-  }
-
   function moveCarousel(step) {
     setFamilySlideIndex((current) => {
       const total = playerOptions.length
@@ -362,13 +355,6 @@ function App() {
               ))}
             </div>
           </div>
-
-          <div className="action-row">
-            <button type="button" className="secondary" onClick={handleReset}>
-              Reset round
-            </button>
-          </div>
-
           <p className="score-line">Score: {score} / {petEntries.length}</p>
         </article>
       </section>
