@@ -1,12 +1,12 @@
 .login-shell {
   position: relative;
-  width: min(560px, calc(100% - 1.2rem));
-  margin: 1.4rem auto;
-  min-height: calc(100vh - 2.8rem);
+  width: 100%;
+  margin: 0;
+  min-height: 100vh;
   display: grid;
   place-items: center;
   overflow: hidden;
-  border-radius: 20px;
+  border-radius: 0;
   background:
     linear-gradient(rgba(8, 21, 35, 0.46), rgba(8, 21, 35, 0.46)),
     url('/placeholders/Dog.gif') center / cover no-repeat;
@@ -22,7 +22,7 @@
 .login-card {
   position: relative;
   z-index: 1;
-  width: 100%;
+  width: min(560px, calc(100% - 1.2rem));
   border: 1px solid #d7e0ea;
   border-radius: 20px;
   padding: clamp(1.2rem, 3vw, 1.8rem);
