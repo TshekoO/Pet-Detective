@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #223246;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(13, 89, 136, 0.08), transparent 35%),
+    radial-gradient(circle at 90% 15%, rgba(20, 121, 178, 0.08), transparent 30%),
+    linear-gradient(170deg, #f7faff 0%, #edf3fa 100%);
+}
+
+h1,
+h2 {
+  font-family: 'Fraunces', Georgia, serif;
+}

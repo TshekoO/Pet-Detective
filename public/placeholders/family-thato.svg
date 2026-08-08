@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 280" role="img" aria-labelledby="title desc">
+  <title id="title">Thato Family placeholder</title>
+  <desc id="desc">Placeholder family portrait for Thato Family.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#846145"/>
+      <stop offset="100%" stop-color="#37677f"/>
+    </linearGradient>
+  </defs>
+  <rect width="420" height="280" fill="url(#bg)"/>
+  <circle cx="138" cy="120" r="33" fill="#f4d7bf"/>
+  <circle cx="210" cy="108" r="38" fill="#eed1b4"/>
+  <circle cx="286" cy="121" r="32" fill="#f2d7c1"/>
+  <text x="210" y="240" text-anchor="middle" font-size="30" font-family="Arial, sans-serif" fill="#ffffff">Thato Family</text>
+</svg>

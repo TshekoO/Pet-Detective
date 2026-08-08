@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 360" role="img" aria-labelledby="title desc">
+  <title id="title">Pet placeholder 3</title>
+  <desc id="desc">Stylized placeholder image for pet three.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#fff0d4"/>
+      <stop offset="100%" stop-color="#d9f5ef"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="360" fill="url(#bg)"/>
+  <ellipse cx="300" cy="180" rx="98" ry="86" fill="#8a6945"/>
+  <circle cx="264" cy="154" r="11" fill="#fff"/>
+  <circle cx="336" cy="154" r="11" fill="#fff"/>
+  <circle cx="264" cy="154" r="4.8" fill="#2a2a2a"/>
+  <circle cx="336" cy="154" r="4.8" fill="#2a2a2a"/>
+  <ellipse cx="300" cy="196" rx="16" ry="8" fill="#2a2a2a"/>
+  <text x="300" y="318" text-anchor="middle" font-size="28" font-family="Arial, sans-serif" fill="#5b3f23">Pet #3</text>
+</svg>
