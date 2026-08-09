@@ -1,16 +1,45 @@
-# React + Vite
+# Pet Detective
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Pet Detective is a React game where players match pet clues to families.
 
-Currently, two official plugins are available:
+## Shared leaderboard (no Firebase)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The app now uses a local Node/Express API with a JSON file for leaderboard data.
+This means no Firebase billing is needed.
 
-## React Compiler
+## Run locally
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. Install dependencies:
 
-## Expanding the Oxlint configuration
+```bash
+npm install
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+2. Start the API server (terminal 1):
+
+```bash
+npm run server
+```
+
+3. Start the React app (terminal 2):
+
+```bash
+npm run dev
+```
+
+The Vite dev server is configured with `host: true` and API proxying to `http://localhost:4000`.
+
+## Play from phone + laptop
+
+1. Keep both devices on the same Wi-Fi network.
+2. Start both commands above on your laptop.
+3. Open the Vite URL from your laptop IP on your phone (example: `http://192.168.1.20:5173`).
+
+Both phone and laptop will share the same leaderboard file while your server is running.
+
+## Admin controls
+
+Log in as `Ogotlhe` to open the admin portal:
+
+- `Delete User` removes one user.
+- `Clear All Users` removes everyone from the leaderboard.

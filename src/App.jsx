@@ -2,26 +2,58 @@ import { useEffect, useState } from 'react'
 import './App.css'
 
 const PLAYER_NAME_STORAGE_KEY = 'pet-detective-player-name'
-const LEADERBOARD_STORAGE_KEY = 'pet-detective-leaderboard'
 const ADMIN_NAME = 'Ogotlhe'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
-function getStoredLeaderboard() {
-  const storedLeaderboard = localStorage.getItem(LEADERBOARD_STORAGE_KEY)
+async function fetchLeaderboardFromApi() {
+  const response = await fetch(`${API_BASE_URL}/leaderboard`)
 
-  if (!storedLeaderboard) {
-    return []
+  if (!response.ok) {
+    throw new Error('Could not load leaderboard.')
   }
 
-  try {
-    const parsed = JSON.parse(storedLeaderboard)
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
+  const payload = await response.json()
+  return Array.isArray(payload) ? payload : []
 }
 
-function leaderboardChanged(currentLeaderboard, nextLeaderboard) {
-  return JSON.stringify(currentLeaderboard) !== JSON.stringify(nextLeaderboard)
+async function upsertLeaderboardEntry({ name, score, attempts, totalPets }) {
+  const response = await fetch(`${API_BASE_URL}/leaderboard/${encodeURIComponent(name)}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ score, attempts, totalPets }),
+  })
+
+  if (!response.ok) {
+    throw new Error('Could not save player progress.')
+  }
+
+  return response.json()
+}
+
+async function removeLeaderboardEntry(name) {
+  const response = await fetch(`${API_BASE_URL}/leaderboard/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    throw new Error('Could not delete the user.')
+  }
+
+  return response.json()
+}
+
+async function clearLeaderboardEntries() {
+  const response = await fetch(`${API_BASE_URL}/leaderboard`, {
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    throw new Error('Could not clear users.')
+  }
+
+  return response.json()
 }
 
 function App() {
@@ -31,7 +63,9 @@ function App() {
   })
   const [nameInput, setNameInput] = useState('')
   const [loginError, setLoginError] = useState('')
-  const [leaderboard, setLeaderboard] = useState(() => getStoredLeaderboard())
+  const [leaderboard, setLeaderboard] = useState([])
+  const [syncError, setSyncError] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
 
   const employeeNames = [
     'Mpho Family',
@@ -130,69 +164,107 @@ function App() {
   const topScorer = rankedLeaderboard[0]
 
   useEffect(() => {
-    if (!isAdminUser) {
-      return
-    }
+    let isActive = true
 
-    function refreshLeaderboardFromStorage() {
-      const nextLeaderboard = getStoredLeaderboard()
+    async function refreshLeaderboard() {
+      try {
+        const nextLeaderboard = await fetchLeaderboardFromApi()
 
-      setLeaderboard((current) => {
-        if (!leaderboardChanged(current, nextLeaderboard)) {
-          return current
+        if (!isActive) {
+          return
         }
 
-        return nextLeaderboard
-      })
-    }
+        setLeaderboard(nextLeaderboard)
+        setSyncError('')
+      } catch (error) {
+        if (!isActive) {
+          return
+        }
 
-    function handleStorageChange(event) {
-      if (event.key === LEADERBOARD_STORAGE_KEY) {
-        refreshLeaderboardFromStorage()
+        setSyncError(error instanceof Error ? error.message : 'Could not sync leaderboard.')
       }
     }
 
-    refreshLeaderboardFromStorage()
-    window.addEventListener('storage', handleStorageChange)
-    const syncTimer = window.setInterval(refreshLeaderboardFromStorage, 1500)
+    refreshLeaderboard()
+    const syncTimer = window.setInterval(refreshLeaderboard, isAdminUser ? 2000 : 6000)
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange)
+      isActive = false
       window.clearInterval(syncTimer)
     }
-  }, [isAdminUser])
+  }, [isAdminUser, playerName])
 
   useEffect(() => {
     if (!playerName || isAdminUser || attempts === 0) {
       return
     }
 
-    setLeaderboard((current) => {
-      const existingEntry = current.find(
-        (entry) => entry.name.toLowerCase() === playerName.toLowerCase(),
-      )
+    let isActive = true
 
-      const bestScore = existingEntry ? Math.max(existingEntry.bestScore, score) : score
-      const achievedAt =
-        !existingEntry || score > existingEntry.bestScore ? Date.now() : existingEntry.achievedAt
+    async function syncProgress() {
+      setIsSaving(true)
 
-      const updatedEntry = {
-        name: playerName,
-        bestScore,
-        attempts,
-        completed: attempts === petEntries.length,
-        achievedAt,
+      try {
+        const payload = await upsertLeaderboardEntry({
+          name: playerName,
+          score,
+          attempts,
+          totalPets: petEntries.length,
+        })
+
+        if (!isActive) {
+          return
+        }
+
+        setLeaderboard(Array.isArray(payload.leaderboard) ? payload.leaderboard : [])
+        setSyncError('')
+      } catch (error) {
+        if (!isActive) {
+          return
+        }
+
+        setSyncError(error instanceof Error ? error.message : 'Could not sync leaderboard.')
+      } finally {
+        if (isActive) {
+          setIsSaving(false)
+        }
       }
+    }
 
-      const withoutCurrentUser = current.filter(
-        (entry) => entry.name.toLowerCase() !== playerName.toLowerCase(),
-      )
+    syncProgress()
 
-      const nextLeaderboard = [...withoutCurrentUser, updatedEntry]
-      localStorage.setItem(LEADERBOARD_STORAGE_KEY, JSON.stringify(nextLeaderboard))
-      return nextLeaderboard
-    })
+    return () => {
+      isActive = false
+    }
   }, [attempts, isAdminUser, petEntries.length, playerName, score])
+
+  async function handleDeleteUser(name) {
+    if (!window.confirm(`Delete ${name} from the leaderboard?`)) {
+      return
+    }
+
+    try {
+      const payload = await removeLeaderboardEntry(name)
+      setLeaderboard(Array.isArray(payload.leaderboard) ? payload.leaderboard : [])
+      setSyncError('')
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : 'Could not delete the user.')
+    }
+  }
+
+  async function handleClearUsers() {
+    if (!window.confirm('Clear all users from the leaderboard?')) {
+      return
+    }
+
+    try {
+      const payload = await clearLeaderboardEntries()
+      setLeaderboard(Array.isArray(payload.leaderboard) ? payload.leaderboard : [])
+      setSyncError('')
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : 'Could not clear users.')
+    }
+  }
 
   function handleSelection(entryId, value) {
     setPreviewChoices((current) => ({ ...current, [entryId]: value }))
@@ -301,6 +373,13 @@ function App() {
         </header>
 
         <section className="leaderboard-panel" aria-label="User leaderboard">
+          <div className="admin-toolbar">
+            <button type="button" className="danger-button" onClick={handleClearUsers}>
+              Clear All Users
+            </button>
+            {syncError ? <p className="sync-error">{syncError}</p> : null}
+          </div>
+
           {topScorer ? (
             <p className="top-scorer-line">
               1st Place: <strong>{topScorer.name}</strong> with <strong>{topScorer.bestScore}</strong>{' '}
@@ -342,6 +421,13 @@ function App() {
                     {entry.attempts ?? 0} / {petEntries.length} selections
                     {entry.completed ? ' (Complete)' : ' (In progress)'}
                   </span>
+                  <button
+                    type="button"
+                    className="danger-button danger-button-inline"
+                    onClick={() => handleDeleteUser(entry.name)}
+                  >
+                    Delete User
+                  </button>
                 </li>
               ))}
             </ol>
@@ -533,6 +619,8 @@ function App() {
           Remember, there is a prize to be won and the satisfaction of being crowned
           <span> Pet Detective.</span>
         </p>
+        {isSaving ? <p className="sync-note">Saving your score...</p> : null}
+        {syncError ? <p className="sync-error">{syncError}</p> : null}
       </section>
     </main>
   )

@@ -180,6 +180,15 @@
   padding: 1rem 1.05rem;
 }
 
+.admin-toolbar {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 0.65rem;
+}
+
 .top-scorer-line {
   margin: 0;
   color: #2f425a;
@@ -241,6 +250,40 @@
 .progress-caption {
   color: #4c607a;
   font-size: 0.88rem;
+}
+
+.danger-button {
+  border: 1px solid #bc3e3e;
+  border-radius: 10px;
+  padding: 0.45rem 0.8rem;
+  font: inherit;
+  color: #ffffff;
+  background: #bc3e3e;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.danger-button:hover {
+  background: #a83333;
+  border-color: #a83333;
+}
+
+.danger-button-inline {
+  justify-self: start;
+  font-size: 0.84rem;
+  padding: 0.35rem 0.7rem;
+}
+
+.sync-note {
+  margin: 0.55rem 0 0;
+  color: #1f5b87;
+  font-weight: 600;
+}
+
+.sync-error {
+  margin: 0;
+  color: #8e2c2c;
+  font-weight: 600;
 }
 
 .panel-grid {
