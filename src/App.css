@@ -215,6 +215,24 @@
   background: #ffffff;
 }
 
+.leaderboard-item.selected {
+  border-color: #0d5988;
+  box-shadow: inset 0 0 0 1px rgba(13, 89, 136, 0.2);
+}
+
+.session-select-button {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.session-select-button:hover .leaderboard-name {
+  color: #0d5988;
+}
+
 .leaderboard-row-top {
   display: flex;
   align-items: center;
@@ -676,6 +694,30 @@
 .closing-banner span {
   color: #0d5988;
   font-weight: 700;
+}
+
+.answer-detail-panel {
+  margin-top: 0.8rem;
+  border: 1px solid #d8e3ef;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 0.8rem;
+}
+
+.answer-detail-panel h2 {
+  margin: 0 0 0.35rem;
+  color: #17324f;
+}
+
+.answer-detail-list {
+  margin: 0.55rem 0 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.answer-detail-list li {
+  color: #30465f;
 }
 
 @keyframes rise {

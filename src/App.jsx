@@ -1,59 +1,206 @@
-import { useEffect, useState } from 'react'
+import { createClient } from '@supabase/supabase-js'
+import { useCallback, useEffect, useState } from 'react'
 import './App.css'
 
 const PLAYER_NAME_STORAGE_KEY = 'pet-detective-player-name'
+const SESSION_ID_STORAGE_KEY = 'pet-detective-session-id'
 const ADMIN_NAME = 'Ogotlhe'
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
+const GAME_NAME = 'Pet Detective'
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+const IS_SUPABASE_CONFIGURED = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY)
+const supabase = IS_SUPABASE_CONFIGURED ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null
 
-async function fetchLeaderboardFromApi() {
-  const response = await fetch(`${API_BASE_URL}/leaderboard`)
+function mapSessionForUi(session) {
+  const startedAtMs = session.started_at ? Date.parse(session.started_at) : null
+  const completedAtMs = session.completed_at ? Date.parse(session.completed_at) : null
 
-  if (!response.ok) {
+  return {
+    id: session.id,
+    name: session.player_name,
+    gameName: session.game_name,
+    score: Number(session.score ?? 0),
+    totalQuestions: Number(session.total_questions ?? 0),
+    numberCompleted: Number(session.number_completed ?? 0),
+    status: session.status,
+    startedAt: session.started_at,
+    completedAt: session.completed_at,
+    startedAtMs,
+    completedAtMs,
+    completionDurationMs:
+      completedAtMs && startedAtMs ? Math.max(0, completedAtMs - startedAtMs) : Number.POSITIVE_INFINITY,
+  }
+}
+
+async function fetchGameSessions() {
+  if (!supabase) {
+    return []
+  }
+
+  const { data, error } = await supabase
+    .from('game_sessions')
+    .select(
+      'id, player_name, game_name, score, total_questions, number_completed, status, started_at, completed_at',
+    )
+    .eq('game_name', GAME_NAME)
+
+  if (error) {
     throw new Error('Could not load leaderboard.')
   }
 
-  const payload = await response.json()
-  return Array.isArray(payload) ? payload : []
+  return (data ?? []).map(mapSessionForUi)
 }
 
-async function upsertLeaderboardEntry({ name, score, attempts, totalPets }) {
-  const response = await fetch(`${API_BASE_URL}/leaderboard/${encodeURIComponent(name)}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ score, attempts, totalPets }),
+async function fetchAnswersForSession(sessionId) {
+  if (!supabase || !sessionId) {
+    return []
+  }
+
+  const { data, error } = await supabase
+    .from('game_answers')
+    .select(
+      'id, session_id, family_id, family_name, selected_pet_id, correct_pet_id, is_correct, answered_at',
+    )
+    .eq('session_id', sessionId)
+    .order('answered_at', { ascending: true })
+
+  if (error) {
+    throw new Error('Could not load player answers.')
+  }
+
+  return data ?? []
+}
+
+async function createGameSession(playerName, totalQuestions) {
+  if (!supabase) {
+    throw new Error('Supabase is not configured.')
+  }
+
+  const { data, error } = await supabase
+    .from('game_sessions')
+    .insert({
+      player_name: playerName,
+      game_name: GAME_NAME,
+      score: 0,
+      total_questions: totalQuestions,
+      number_completed: 0,
+      status: 'playing',
+    })
+    .select('id, player_name, game_name, score, total_questions, number_completed, status, started_at, completed_at')
+    .single()
+
+  if (error || !data) {
+    throw new Error('Could not start the game session.')
+  }
+
+  return mapSessionForUi(data)
+}
+
+async function saveGameAnswer({
+  sessionId,
+  familyId,
+  familyName,
+  selectedPetId,
+  correctPetId,
+  isCorrect,
+}) {
+  if (!supabase) {
+    throw new Error('Supabase is not configured.')
+  }
+
+  const { error } = await supabase.from('game_answers').insert({
+    session_id: sessionId,
+    family_id: familyId,
+    family_name: familyName,
+    selected_pet_id: selectedPetId,
+    correct_pet_id: correctPetId,
+    is_correct: isCorrect,
   })
 
-  if (!response.ok) {
+  if (error) {
+    throw new Error('Could not save your answer.')
+  }
+}
+
+async function updateGameSessionProgress({ sessionId, score, totalQuestions, numberCompleted }) {
+  if (!supabase) {
+    throw new Error('Supabase is not configured.')
+  }
+
+  const isCompleted = numberCompleted >= totalQuestions
+
+  const { error } = await supabase
+    .from('game_sessions')
+    .update({
+      score,
+      total_questions: totalQuestions,
+      number_completed: numberCompleted,
+      status: isCompleted ? 'completed' : 'playing',
+      completed_at: isCompleted ? new Date().toISOString() : null,
+    })
+    .eq('id', sessionId)
+
+  if (error) {
     throw new Error('Could not save player progress.')
   }
-
-  return response.json()
 }
 
-async function removeLeaderboardEntry(name) {
-  const response = await fetch(`${API_BASE_URL}/leaderboard/${encodeURIComponent(name)}`, {
-    method: 'DELETE',
-  })
-
-  if (!response.ok) {
-    throw new Error('Could not delete the user.')
+async function deleteSessionById(sessionId) {
+  if (!supabase) {
+    throw new Error('Supabase is not configured.')
   }
 
-  return response.json()
+  const { error: answersError } = await supabase.from('game_answers').delete().eq('session_id', sessionId)
+  if (answersError) {
+    throw new Error('Could not delete answer history.')
+  }
+
+  const { error: sessionError } = await supabase.from('game_sessions').delete().eq('id', sessionId)
+  if (sessionError) {
+    throw new Error('Could not delete the user session.')
+  }
 }
 
-async function clearLeaderboardEntries() {
-  const response = await fetch(`${API_BASE_URL}/leaderboard`, {
-    method: 'DELETE',
-  })
+async function clearAllSessions() {
+  if (!supabase) {
+    throw new Error('Supabase is not configured.')
+  }
 
-  if (!response.ok) {
+  const { data, error } = await supabase.from('game_sessions').select('id').eq('game_name', GAME_NAME)
+  if (error) {
+    throw new Error('Could not load sessions to clear.')
+  }
+
+  const sessionIds = (data ?? []).map((row) => row.id)
+
+  if (sessionIds.length) {
+    const { error: answersError } = await supabase.from('game_answers').delete().in('session_id', sessionIds)
+
+    if (answersError) {
+      throw new Error('Could not clear answer history.')
+    }
+  }
+
+  const { error: sessionsError } = await supabase
+    .from('game_sessions')
+    .delete()
+    .eq('game_name', GAME_NAME)
+
+  if (sessionsError) {
     throw new Error('Could not clear users.')
   }
+}
 
-  return response.json()
+function formatDuration(durationMs) {
+  if (!Number.isFinite(durationMs)) {
+    return 'In progress'
+  }
+
+  const totalSeconds = Math.max(0, Math.round(durationMs / 1000))
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+
+  return `${minutes}m ${seconds.toString().padStart(2, '0')}s`
 }
 
 function App() {
@@ -61,9 +208,16 @@ function App() {
     const savedName = localStorage.getItem(PLAYER_NAME_STORAGE_KEY)
     return savedName ? savedName.trim() : ''
   })
+  const [playerSessionId, setPlayerSessionId] = useState(() => {
+    const savedSessionId = localStorage.getItem(SESSION_ID_STORAGE_KEY)
+    return savedSessionId ? savedSessionId.trim() : ''
+  })
   const [nameInput, setNameInput] = useState('')
   const [loginError, setLoginError] = useState('')
   const [leaderboard, setLeaderboard] = useState([])
+  const [selectedSessionId, setSelectedSessionId] = useState('')
+  const [selectedSessionAnswers, setSelectedSessionAnswers] = useState([])
+  const [isLoadingAnswers, setIsLoadingAnswers] = useState(false)
   const [syncError, setSyncError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
@@ -154,76 +308,132 @@ function App() {
   const rankedLeaderboard = [...leaderboard]
     .filter((entry) => entry.name.toLowerCase() !== ADMIN_NAME.toLowerCase())
     .sort((a, b) => {
-      if (b.bestScore !== a.bestScore) {
-        return b.bestScore - a.bestScore
+      if (b.score !== a.score) {
+        return b.score - a.score
       }
 
-      return a.achievedAt - b.achievedAt
+      const aIsCompleted = a.status === 'completed'
+      const bIsCompleted = b.status === 'completed'
+
+      if (aIsCompleted !== bIsCompleted) {
+        return Number(bIsCompleted) - Number(aIsCompleted)
+      }
+
+      return a.completionDurationMs - b.completionDurationMs
     })
 
-  const topScorer = rankedLeaderboard[0]
-
-  useEffect(() => {
-    let isActive = true
-
-    async function refreshLeaderboard() {
-      try {
-        const nextLeaderboard = await fetchLeaderboardFromApi()
-
-        if (!isActive) {
-          return
-        }
-
-        setLeaderboard(nextLeaderboard)
-        setSyncError('')
-      } catch (error) {
-        if (!isActive) {
-          return
-        }
-
-        setSyncError(error instanceof Error ? error.message : 'Could not sync leaderboard.')
+  const winner = rankedLeaderboard
+    .filter((entry) => entry.status === 'completed')
+    .sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score
       }
+
+      return a.completionDurationMs - b.completionDurationMs
+    })[0]
+
+  const selectedSession = rankedLeaderboard.find((entry) => entry.id === selectedSessionId) ?? null
+
+  const refreshLeaderboard = useCallback(async () => {
+    if (!IS_SUPABASE_CONFIGURED) {
+      setSyncError('Supabase env vars are missing. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
+      return
     }
 
+    try {
+      const nextLeaderboard = await fetchGameSessions()
+      setLeaderboard(nextLeaderboard)
+      setSyncError('')
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : 'Could not sync leaderboard.')
+    }
+  }, [])
+
+  const refreshSelectedSessionAnswers = useCallback(async (sessionId) => {
+    if (!sessionId || !IS_SUPABASE_CONFIGURED) {
+      setSelectedSessionAnswers([])
+      return
+    }
+
+    setIsLoadingAnswers(true)
+
+    try {
+      const answers = await fetchAnswersForSession(sessionId)
+      setSelectedSessionAnswers(answers)
+      setSyncError('')
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : 'Could not load player answers.')
+    } finally {
+      setIsLoadingAnswers(false)
+    }
+  }, [])
+
+  useEffect(() => {
     refreshLeaderboard()
+
+    if (selectedSessionId) {
+      refreshSelectedSessionAnswers(selectedSessionId)
+    }
+
     const syncTimer = window.setInterval(refreshLeaderboard, isAdminUser ? 2000 : 6000)
 
     return () => {
-      isActive = false
       window.clearInterval(syncTimer)
     }
-  }, [isAdminUser, playerName])
+  }, [isAdminUser, refreshLeaderboard, refreshSelectedSessionAnswers, selectedSessionId])
 
   useEffect(() => {
-    if (!playerName || isAdminUser || attempts === 0) {
+    if (!isAdminUser || !IS_SUPABASE_CONFIGURED || !supabase) {
+      return
+    }
+
+    const channel = supabase
+      .channel('pet-detective-admin-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_sessions' }, () => {
+        refreshLeaderboard()
+        if (selectedSessionId) {
+          refreshSelectedSessionAnswers(selectedSessionId)
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_answers' }, () => {
+        refreshLeaderboard()
+        if (selectedSessionId) {
+          refreshSelectedSessionAnswers(selectedSessionId)
+        }
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [isAdminUser, refreshLeaderboard, refreshSelectedSessionAnswers, selectedSessionId])
+
+  useEffect(() => {
+    if (!playerName || isAdminUser || playerSessionId || !IS_SUPABASE_CONFIGURED) {
       return
     }
 
     let isActive = true
 
-    async function syncProgress() {
+    async function restoreSessionAfterRefresh() {
       setIsSaving(true)
 
       try {
-        const payload = await upsertLeaderboardEntry({
-          name: playerName,
-          score,
-          attempts,
-          totalPets: petEntries.length,
-        })
+        const session = await createGameSession(playerName, petEntries.length)
 
         if (!isActive) {
           return
         }
 
-        setLeaderboard(Array.isArray(payload.leaderboard) ? payload.leaderboard : [])
+        setPlayerSessionId(session.id)
+        localStorage.setItem(SESSION_ID_STORAGE_KEY, session.id)
         setSyncError('')
       } catch (error) {
         if (!isActive) {
           return
         }
 
-        setSyncError(error instanceof Error ? error.message : 'Could not sync leaderboard.')
+        setSyncError(error instanceof Error ? error.message : 'Could not start the game session.')
       } finally {
         if (isActive) {
           setIsSaving(false)
@@ -231,21 +441,27 @@ function App() {
       }
     }
 
-    syncProgress()
+    restoreSessionAfterRefresh()
 
     return () => {
       isActive = false
     }
-  }, [attempts, isAdminUser, petEntries.length, playerName, score])
+  }, [isAdminUser, petEntries.length, playerName, playerSessionId])
 
-  async function handleDeleteUser(name) {
+  async function handleDeleteUser(sessionId, name) {
     if (!window.confirm(`Delete ${name} from the leaderboard?`)) {
       return
     }
 
     try {
-      const payload = await removeLeaderboardEntry(name)
-      setLeaderboard(Array.isArray(payload.leaderboard) ? payload.leaderboard : [])
+      await deleteSessionById(sessionId)
+
+      if (selectedSessionId === sessionId) {
+        setSelectedSessionId('')
+        setSelectedSessionAnswers([])
+      }
+
+      await refreshLeaderboard()
       setSyncError('')
     } catch (error) {
       setSyncError(error instanceof Error ? error.message : 'Could not delete the user.')
@@ -258,8 +474,10 @@ function App() {
     }
 
     try {
-      const payload = await clearLeaderboardEntries()
-      setLeaderboard(Array.isArray(payload.leaderboard) ? payload.leaderboard : [])
+      await clearAllSessions()
+      setLeaderboard([])
+      setSelectedSessionId('')
+      setSelectedSessionAnswers([])
       setSyncError('')
     } catch (error) {
       setSyncError(error instanceof Error ? error.message : 'Could not clear users.')
@@ -270,7 +488,7 @@ function App() {
     setPreviewChoices((current) => ({ ...current, [entryId]: value }))
   }
 
-  function handleConfirmSelection() {
+  async function handleConfirmSelection() {
     const selectedFamily = previewChoices[currentPet.id]
 
     if (!selectedFamily) {
@@ -283,6 +501,49 @@ function App() {
       ...current,
       [currentPet.id]: isCorrect ? 'correct' : 'wrong',
     }))
+
+    if (!playerSessionId || !IS_SUPABASE_CONFIGURED || isAdminUser) {
+      return
+    }
+
+    const nextResultsByPet = {
+      ...resultsByPet,
+      [currentPet.id]: isCorrect ? 'correct' : 'wrong',
+    }
+
+    const nextScore = petEntries.reduce((total, entry) => {
+      return total + Number(nextResultsByPet[entry.id] === 'correct')
+    }, 0)
+
+    const nextCompleted = petEntries.reduce((total, entry) => {
+      return total + Number(Boolean(nextResultsByPet[entry.id]))
+    }, 0)
+
+    setIsSaving(true)
+
+    try {
+      await saveGameAnswer({
+        sessionId: playerSessionId,
+        familyId: currentPet.id,
+        familyName: currentPet.answer,
+        selectedPetId: selectedFamily,
+        correctPetId: currentPet.answer,
+        isCorrect,
+      })
+
+      await updateGameSessionProgress({
+        sessionId: playerSessionId,
+        score: nextScore,
+        totalQuestions: petEntries.length,
+        numberCompleted: nextCompleted,
+      })
+
+      setSyncError('')
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : 'Could not sync leaderboard.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   function moveCarousel(step) {
@@ -296,7 +557,7 @@ function App() {
     setFamilySlideIndex(index)
   }
 
-  function handleLoginSubmit(event) {
+  async function handleLoginSubmit(event) {
     event.preventDefault()
 
     const trimmedName = nameInput.trim()
@@ -306,17 +567,44 @@ function App() {
       return
     }
 
-    setPlayerName(trimmedName)
-    localStorage.setItem(PLAYER_NAME_STORAGE_KEY, trimmedName)
-    setLoginError('')
-    setNameInput('')
+    if (!IS_SUPABASE_CONFIGURED) {
+      setLoginError('Missing Supabase setup. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
+      return
+    }
+
+    setIsSaving(true)
+
+    try {
+      if (trimmedName.toLowerCase() === ADMIN_NAME.toLowerCase()) {
+        setPlayerSessionId('')
+        localStorage.removeItem(SESSION_ID_STORAGE_KEY)
+      } else {
+        const session = await createGameSession(trimmedName, petEntries.length)
+        setPlayerSessionId(session.id)
+        localStorage.setItem(SESSION_ID_STORAGE_KEY, session.id)
+      }
+
+      setSyncError('')
+      setPlayerName(trimmedName)
+      localStorage.setItem(PLAYER_NAME_STORAGE_KEY, trimmedName)
+      setLoginError('')
+      setNameInput('')
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : 'Could not start the game session.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   function handleLogout() {
     setPlayerName('')
+    setPlayerSessionId('')
+    setSelectedSessionId('')
+    setSelectedSessionAnswers([])
     setNameInput('')
     setLoginError('')
     localStorage.removeItem(PLAYER_NAME_STORAGE_KEY)
+    localStorage.removeItem(SESSION_ID_STORAGE_KEY)
   }
 
   if (!playerName) {
@@ -350,6 +638,7 @@ function App() {
               Login
             </button>
           </form>
+          {isSaving ? <p className="sync-note">Starting your game session...</p> : null}
         </section>
       </main>
     )
@@ -362,7 +651,7 @@ function App() {
           <p className="hero-kicker">Admin Portal</p>
           <h1>User Leaderboard</h1>
           <p className="hero-summary">
-            Rankings are ordered from highest score. The first user with the top score wins.
+            Rankings are ordered by highest score. Ties are resolved by fastest completion time.
           </p>
           <div className="session-bar" role="status" aria-live="polite">
             <span>Signed in as {playerName}</span>
@@ -380,31 +669,40 @@ function App() {
             {syncError ? <p className="sync-error">{syncError}</p> : null}
           </div>
 
-          {topScorer ? (
+          {winner ? (
             <p className="top-scorer-line">
-              1st Place: <strong>{topScorer.name}</strong> with <strong>{topScorer.bestScore}</strong>{' '}
-              / {petEntries.length}
+              Winner: <strong>{winner.name}</strong> with <strong>{winner.score}</strong> /{' '}
+              {winner.totalQuestions} in <strong>{formatDuration(winner.completionDurationMs)}</strong>
             </p>
           ) : (
-            <p className="top-scorer-line">No user scores recorded yet.</p>
+            <p className="top-scorer-line">No completed players yet.</p>
           )}
 
           {rankedLeaderboard.length ? (
             <ol className="leaderboard-list">
               {rankedLeaderboard.map((entry) => (
-                <li key={entry.name}>
+                <li
+                  key={entry.id}
+                  className={entry.id === selectedSessionId ? 'leaderboard-item selected' : 'leaderboard-item'}
+                >
                   <div className="leaderboard-row-top">
-                    <span className="leaderboard-name">{entry.name}</span>
+                    <button
+                      type="button"
+                      className="session-select-button"
+                      onClick={() => setSelectedSessionId(entry.id)}
+                    >
+                      <span className="leaderboard-name">{entry.name}</span>
+                    </button>
                     <span className="leaderboard-score">
-                      {entry.bestScore} / {petEntries.length}
+                      {entry.score} / {entry.totalQuestions}
                     </span>
                   </div>
                   <div
                     className="progress-track"
                     role="progressbar"
                     aria-valuemin={0}
-                    aria-valuemax={petEntries.length}
-                    aria-valuenow={entry.attempts ?? 0}
+                    aria-valuemax={entry.totalQuestions}
+                    aria-valuenow={entry.numberCompleted ?? 0}
                     aria-label={`${entry.name} selection progress`}
                   >
                     <span
@@ -412,25 +710,55 @@ function App() {
                       style={{
                         width: `${Math.min(
                           100,
-                          Math.max(0, ((entry.attempts ?? 0) / petEntries.length) * 100),
+                          Math.max(0, ((entry.numberCompleted ?? 0) / Math.max(1, entry.totalQuestions)) * 100),
                         )}%`,
                       }}
                     />
                   </div>
                   <span className="progress-caption">
-                    {entry.attempts ?? 0} / {petEntries.length} selections
-                    {entry.completed ? ' (Complete)' : ' (In progress)'}
+                    {entry.numberCompleted ?? 0} / {entry.totalQuestions} selections ({entry.status})
                   </span>
+                  {entry.status === 'completed' ? (
+                    <span className="progress-caption">
+                      Completion time: {formatDuration(entry.completionDurationMs)}
+                    </span>
+                  ) : null}
                   <button
                     type="button"
                     className="danger-button danger-button-inline"
-                    onClick={() => handleDeleteUser(entry.name)}
+                    onClick={() => handleDeleteUser(entry.id, entry.name)}
                   >
                     Delete User
                   </button>
                 </li>
               ))}
             </ol>
+          ) : null}
+
+          {selectedSession ? (
+            <section className="answer-detail-panel" aria-label="Selected player answers">
+              <h2>{selectedSession.name} answer history</h2>
+              <p className="progress-caption">Session: {selectedSession.id}</p>
+              {isLoadingAnswers ? <p className="progress-caption">Loading answers...</p> : null}
+              {!isLoadingAnswers && selectedSessionAnswers.length === 0 ? (
+                <p className="progress-caption">No answers recorded yet.</p>
+              ) : null}
+              {!isLoadingAnswers && selectedSessionAnswers.length ? (
+                <ul className="answer-detail-list">
+                  {selectedSessionAnswers.map((answer) => (
+                    <li key={answer.id}>
+                      <strong>Family #{answer.family_id}</strong> ({answer.family_name})
+                      <br />
+                      Selected: {answer.selected_pet_id}
+                      <br />
+                      Correct: {answer.correct_pet_id}
+                      <br />
+                      Result: {answer.is_correct ? 'Correct' : 'Incorrect'}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </section>
           ) : null}
         </section>
       </main>
@@ -557,14 +885,10 @@ function App() {
               {resultsByPet[currentPet.id] ? (
                 <p
                   className={
-                    resultsByPet[currentPet.id] === 'correct'
-                      ? 'result-chip correct'
-                      : 'result-chip wrong'
+                    resultsByPet[currentPet.id] === 'correct' ? 'result-chip correct' : 'result-chip wrong'
                   }
                 >
-                  {resultsByPet[currentPet.id] === 'correct'
-                    ? 'Answer Correct'
-                    : 'Oh Incorrect'}
+                  {resultsByPet[currentPet.id] === 'correct' ? 'Answer Correct' : 'Oh Incorrect'}
                 </p>
               ) : null}
             </article>
@@ -572,7 +896,9 @@ function App() {
             <p className="selection-count">
               Confirmed selections: {attempts} / {petEntries.length}
             </p>
-            <p className="selection-count">Pet {currentPet.id} of {petEntries.length}</p>
+            <p className="selection-count">
+              Pet {currentPet.id} of {petEntries.length}
+            </p>
 
             <div className="round-nav" aria-label="Pet navigation">
               <button
@@ -587,9 +913,7 @@ function App() {
               <button
                 type="button"
                 className="secondary"
-                onClick={() =>
-                  setCurrentPetIndex((value) => Math.min(petEntries.length - 1, value + 1))
-                }
+                onClick={() => setCurrentPetIndex((value) => Math.min(petEntries.length - 1, value + 1))}
                 disabled={currentPetIndex === petEntries.length - 1}
               >
                 Next
@@ -610,7 +934,9 @@ function App() {
               ))}
             </div>
           </div>
-          <p className="score-line">Score: {score} / {petEntries.length}</p>
+          <p className="score-line">
+            Score: {score} / {petEntries.length}
+          </p>
         </article>
       </section>
 
