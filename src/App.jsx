@@ -45,7 +45,7 @@ async function fetchGameSessions() {
     .eq('game_name', GAME_NAME)
 
   if (error) {
-    throw new Error('Could not load leaderboard.')
+    throw new Error(error.message || 'Could not load leaderboard.')
   }
 
   return (data ?? []).map(mapSessionForUi)
@@ -65,7 +65,7 @@ async function fetchAnswersForSession(sessionId) {
     .order('answered_at', { ascending: true })
 
   if (error) {
-    throw new Error('Could not load player answers.')
+    throw new Error(error.message || 'Could not load player answers.')
   }
 
   return data ?? []
@@ -90,7 +90,7 @@ async function createGameSession(playerName, totalQuestions) {
     .single()
 
   if (error || !data) {
-    throw new Error('Could not start the game session.')
+    throw new Error(error?.message || 'Could not start the game session.')
   }
 
   return mapSessionForUi(data)
@@ -118,7 +118,7 @@ async function saveGameAnswer({
   })
 
   if (error) {
-    throw new Error('Could not save your answer.')
+    throw new Error(error.message || 'Could not save your answer.')
   }
 }
 
@@ -141,7 +141,7 @@ async function updateGameSessionProgress({ sessionId, score, totalQuestions, num
     .eq('id', sessionId)
 
   if (error) {
-    throw new Error('Could not save player progress.')
+    throw new Error(error.message || 'Could not save player progress.')
   }
 }
 
