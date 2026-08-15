@@ -9,7 +9,7 @@
   border-radius: 0;
   background:
     linear-gradient(rgba(8, 21, 35, 0.46), rgba(8, 21, 35, 0.46)),
-    url('/placeholders/Dog.gif') center / cover no-repeat;
+    url('/pet wallpaper.jpg') center / cover no-repeat;
 }
 
 .login-shell::before {
@@ -23,13 +23,14 @@
   position: relative;
   z-index: 1;
   width: min(560px, calc(100% - 1.2rem));
-  border: 1px solid #d7e0ea;
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 20px;
   padding: clamp(1.2rem, 3vw, 1.8rem);
   background:
-    linear-gradient(140deg, rgba(255, 255, 255, 0.96), rgba(245, 251, 255, 0.96)),
-    radial-gradient(circle at 85% 10%, rgba(13, 89, 136, 0.1), transparent 40%);
-  box-shadow: 0 20px 50px rgba(11, 28, 45, 0.14);
+    linear-gradient(140deg, rgba(255, 255, 255, 0.18), rgba(245, 251, 255, 0.12)),
+    radial-gradient(circle at 85% 10%, rgba(255, 255, 255, 0.16), transparent 40%);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 20px 50px rgba(11, 28, 45, 0.24);
   animation: rise 450ms ease-out;
 }
 
@@ -41,9 +42,13 @@
   color: #0f1a2b;
 }
 
+.login-card .hero-kicker {
+  color: rgba(255, 255, 255, 0.92);
+}
+
 .login-summary {
   margin-top: 0.7rem;
-  color: #3f4e63;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .login-form {
@@ -56,7 +61,7 @@
   font-size: 0.88rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #4f627a;
+  color: rgba(255, 255, 255, 0.92);
   font-weight: 700;
 }
 
@@ -115,6 +120,59 @@
   box-shadow: 0 18px 50px rgba(11, 28, 45, 0.12);
 }
 
+.score-popup-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(7, 18, 31, 0.58);
+  backdrop-filter: blur(6px);
+}
+
+.score-popup {
+  width: min(460px, 100%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 24px;
+  padding: 1.4rem;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(242, 248, 253, 0.96)),
+    radial-gradient(circle at top right, rgba(13, 89, 136, 0.15), transparent 42%);
+  box-shadow: 0 22px 60px rgba(8, 21, 35, 0.3);
+  text-align: center;
+  animation: rise 220ms ease-out;
+}
+
+.score-popup-kicker {
+  margin: 0;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #0d5988;
+  font-weight: 800;
+}
+
+.score-popup h2 {
+  margin: 0.45rem 0 0;
+  color: #10243d;
+  font-size: clamp(1.7rem, 4vw, 2.3rem);
+}
+
+.score-popup-text,
+.score-popup-score {
+  margin: 0.65rem 0 0;
+  color: #42556d;
+}
+
+.score-popup-score strong {
+  color: #0d5988;
+}
+
+.score-popup-button {
+  margin-top: 1rem;
+}
+
 .hero-banner {
   text-align: left;
   margin-bottom: 1rem;
@@ -144,6 +202,60 @@
   margin-top: 0.75rem;
   max-width: 70ch;
   color: #3f4e63;
+}
+
+.playful-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 0.95rem;
+}
+
+.playful-card {
+  border: 1px solid #d6e2ee;
+  border-radius: 18px;
+  padding: 1rem 1.05rem;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(242, 248, 253, 0.94)),
+    radial-gradient(circle at top right, rgba(13, 89, 136, 0.08), transparent 42%);
+  box-shadow: 0 14px 34px rgba(11, 28, 45, 0.08);
+}
+
+.playful-card-accent {
+  background:
+    linear-gradient(145deg, rgba(228, 244, 255, 0.96), rgba(255, 255, 255, 0.96)),
+    radial-gradient(circle at top right, rgba(13, 89, 136, 0.18), transparent 42%);
+}
+
+.playful-card-warm {
+  background:
+    linear-gradient(145deg, rgba(255, 246, 231, 0.96), rgba(255, 255, 255, 0.96)),
+    radial-gradient(circle at top right, rgba(210, 133, 48, 0.18), transparent 40%);
+}
+
+.playful-card-kicker {
+  margin: 0;
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #0d5988;
+  font-weight: 800;
+}
+
+.playful-card h2,
+.playful-card strong {
+  display: block;
+  margin: 0.3rem 0 0;
+  color: #11253f;
+}
+
+.playful-card h2 {
+  font-size: 1.3rem;
+}
+
+.playful-card p:last-child {
+  margin: 0.45rem 0 0;
+  color: #42556d;
 }
 
 .session-bar {
@@ -397,6 +509,33 @@
   border-radius: 12px;
   padding: 0.75rem;
   background: #ffffff;
+}
+
+.case-header {
+  margin-bottom: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.case-kicker,
+.case-hint {
+  margin: 0;
+}
+
+.case-kicker {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #0d5988;
+  font-weight: 800;
+}
+
+.case-hint {
+  color: #52657b;
+  font-size: 0.92rem;
 }
 
 .pet-and-family-layout {
@@ -798,6 +937,10 @@
   .page-shell {
     width: calc(100% - 1rem);
     margin-top: 0.5rem;
+  }
+
+  .playful-strip {
+    grid-template-columns: 1fr;
   }
 
   .panel-grid {

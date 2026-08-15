@@ -263,6 +263,46 @@ function formatDuration(durationMs) {
   return `${minutes}m ${seconds.toString().padStart(2, '0')}s`
 }
 
+function getDetectiveMood(attempts, totalQuestions) {
+  if (attempts === 0) {
+    return 'Warm up your detective instincts. The first clue is waiting.'
+  }
+
+  if (attempts >= totalQuestions) {
+    return 'Case closed. The pets have all been matched.'
+  }
+
+  const remaining = totalQuestions - attempts
+
+  if (remaining <= 2) {
+    return 'Final stretch. Trust your instincts and close the case.'
+  }
+
+  if (attempts >= Math.ceil(totalQuestions / 2)) {
+    return 'You are on a roll. The mystery board is starting to make sense.'
+  }
+
+  return 'The clues are lining up. Keep following the paw prints.'
+}
+
+function getFinishTitle(score, totalQuestions) {
+  const ratio = totalQuestions ? score / totalQuestions : 0
+
+  if (ratio === 1) {
+    return 'Top-tier pet detective.'
+  }
+
+  if (ratio >= 0.75) {
+    return 'Strong detective work.'
+  }
+
+  if (ratio >= 0.5) {
+    return 'Solid sleuthing.'
+  }
+
+  return 'Case completed.'
+}
+
 function App() {
   const [playerName, setPlayerName] = useState(() => {
     const savedName = localStorage.getItem(PLAYER_NAME_STORAGE_KEY)
@@ -272,7 +312,8 @@ function App() {
     const savedSessionId = localStorage.getItem(SESSION_ID_STORAGE_KEY)
     return savedSessionId ? savedSessionId.trim() : ''
   })
-  const [nameInput, setNameInput] = useState('')
+  const [firstNameInput, setFirstNameInput] = useState('')
+  const [lastNameInput, setLastNameInput] = useState('')
   const [loginError, setLoginError] = useState('')
   const [leaderboard, setLeaderboard] = useState([])
   const [selectedSessionId, setSelectedSessionId] = useState('')
@@ -280,6 +321,7 @@ function App() {
   const [isLoadingAnswers, setIsLoadingAnswers] = useState(false)
   const [syncError, setSyncError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [showScorePopup, setShowScorePopup] = useState(false)
 
   const employeeNames = EMPLOYEE_DIRECTORY_ASSETS.map((entry) => entry.name)
 
@@ -345,6 +387,9 @@ function App() {
     return total + Number(Boolean(resultsByPet[entry.id]))
   }, 0)
   const isGameComplete = attempts === petEntries.length
+  const progressPercent = Math.round((attempts / Math.max(1, petEntries.length)) * 100)
+  const detectiveMood = getDetectiveMood(attempts, petEntries.length)
+  const finishTitle = getFinishTitle(score, petEntries.length)
 
   const rankedLeaderboard = [...leaderboard]
     .filter((entry) => entry.name.toLowerCase() !== ADMIN_NAME.toLowerCase())
@@ -489,6 +534,15 @@ function App() {
     }
   }, [isAdminUser, petEntries.length, playerName, playerSessionId])
 
+  useEffect(() => {
+    if (isGameComplete && !isAdminUser) {
+      setShowScorePopup(true)
+      return
+    }
+
+    setShowScorePopup(false)
+  }, [isAdminUser, isGameComplete])
+
   async function handleDeleteUser(sessionId, name) {
     if (!window.confirm(`Delete ${name} from the leaderboard?`)) {
       return
@@ -595,10 +649,13 @@ function App() {
   async function handleLoginSubmit(event) {
     event.preventDefault()
 
-    const trimmedName = nameInput.trim()
+    const trimmedFirstName = firstNameInput.trim()
+    const trimmedLastName = lastNameInput.trim()
+    const isAdminLogin = trimmedFirstName.toLowerCase() === ADMIN_NAME.toLowerCase() && !trimmedLastName
+    const trimmedName = isAdminLogin ? trimmedFirstName : `${trimmedFirstName} ${trimmedLastName}`.trim()
 
-    if (!trimmedName) {
-      setLoginError('Please enter your name to continue.')
+    if (!trimmedFirstName || (!trimmedLastName && !isAdminLogin)) {
+      setLoginError('Please enter your first name and last name to continue.')
       return
     }
 
@@ -623,7 +680,8 @@ function App() {
       setPlayerName(trimmedName)
       localStorage.setItem(PLAYER_NAME_STORAGE_KEY, trimmedName)
       setLoginError('')
-      setNameInput('')
+      setFirstNameInput('')
+      setLastNameInput('')
     } catch (error) {
       setLoginError(error instanceof Error ? error.message : 'Could not start the game session.')
     } finally {
@@ -636,8 +694,10 @@ function App() {
     setPlayerSessionId('')
     setSelectedSessionId('')
     setSelectedSessionAnswers([])
-    setNameInput('')
+    setFirstNameInput('')
+    setLastNameInput('')
     setLoginError('')
+    setShowScorePopup(false)
     localStorage.removeItem(PLAYER_NAME_STORAGE_KEY)
     localStorage.removeItem(SESSION_ID_STORAGE_KEY)
   }
@@ -649,22 +709,36 @@ function App() {
           <p className="hero-kicker">Pet Detective</p>
           <h1>Login</h1>
           <p className="login-summary">
-            Enter your name to capture your details and continue into the software.
+            Enter your first name and last name to capture your details.
           </p>
 
           <form className="login-form" onSubmit={handleLoginSubmit}>
-            <label htmlFor="player-name" className="login-label">
-              Your name
+            <label htmlFor="player-first-name" className="login-label">
+              First name
             </label>
             <input
-              id="player-name"
-              name="playerName"
+              id="player-first-name"
+              name="firstName"
               type="text"
               className="login-input"
-              value={nameInput}
-              onChange={(event) => setNameInput(event.target.value)}
-              placeholder="Type your name"
-              autoComplete="name"
+              value={firstNameInput}
+              onChange={(event) => setFirstNameInput(event.target.value)}
+              placeholder="Type your first name"
+              autoComplete="given-name"
+            />
+
+            <label htmlFor="player-last-name" className="login-label">
+              Last name
+            </label>
+            <input
+              id="player-last-name"
+              name="lastName"
+              type="text"
+              className="login-input"
+              value={lastNameInput}
+              onChange={(event) => setLastNameInput(event.target.value)}
+              placeholder="Type your last name"
+              autoComplete="family-name"
             />
 
             {loginError ? <p className="login-error">{loginError}</p> : null}
@@ -802,6 +876,22 @@ function App() {
 
   return (
     <main className="page-shell">
+      {showScorePopup ? (
+        <div className="score-popup-backdrop" role="presentation">
+          <section className="score-popup" role="dialog" aria-modal="true" aria-labelledby="score-popup-title">
+            <p className="score-popup-kicker">Case closed</p>
+            <h2 id="score-popup-title">{finishTitle}</h2>
+            <p className="score-popup-text">You finished Pet Detective.</p>
+            <p className="score-popup-score">
+              Final score: <strong>{score} / {petEntries.length}</strong>
+            </p>
+            <button type="button" className="confirm-button score-popup-button" onClick={() => setShowScorePopup(false)}>
+              See results
+            </button>
+          </section>
+        </div>
+      ) : null}
+
       <header className="hero-banner">
         <p className="hero-kicker">Community Competition</p>
         <h1>Match a Pet</h1>
@@ -816,6 +906,24 @@ function App() {
           </button>
         </div>
       </header>
+
+      <section className="playful-strip" aria-label="Game progress highlights">
+        <article className="playful-card playful-card-accent">
+          <p className="playful-card-kicker">Current mission</p>
+          <h2>Follow the paw prints</h2>
+          <p>{detectiveMood}</p>
+        </article>
+        <article className="playful-card">
+          <p className="playful-card-kicker">Pawgress</p>
+          <strong>{attempts} of {petEntries.length}</strong>
+          <p>{progressPercent}% of the case file is complete.</p>
+        </article>
+        <article className="playful-card playful-card-warm">
+          <p className="playful-card-kicker">Prize energy</p>
+          <strong>{isGameComplete ? finishTitle : 'Pet Detective title is still in play.'}</strong>
+          <p>{isGameComplete ? `Your score is locked in at ${score} out of ${petEntries.length}.` : 'Every good guess moves you closer to the crown.'}</p>
+        </article>
+      </section>
 
       <section className="panel-grid" aria-label="Game instructions">
         <article className="info-panel">
@@ -840,6 +948,11 @@ function App() {
           <h2>Game board</h2>
           <div className="game-board">
             <article className="pet-card" key={currentPet.id}>
+              <div className="case-header">
+                <p className="case-kicker">Case file #{currentPet.id}</p>
+                <p className="case-hint">Match the pet with the right family.</p>
+              </div>
+
               <div className="pet-and-family-layout">
                 <div className="pet-media">
                   {currentPet.hasPetPhoto ? (
@@ -921,7 +1034,7 @@ function App() {
                     resultsByPet[currentPet.id] === 'correct' ? 'result-chip correct' : 'result-chip wrong'
                   }
                 >
-                  Selection saved
+                  Clue logged
                 </p>
               ) : null}
             </article>
@@ -978,7 +1091,7 @@ function App() {
         </p>
         {isGameComplete ? (
           <p className="sync-note" role="status" aria-live="polite">
-            You finished the game. Final score: {score} / {petEntries.length}.
+            {finishTitle} You finished the game with a final score of {score} / {petEntries.length}.
           </p>
         ) : null}
         {isSaving ? <p className="sync-note">Saving your score...</p> : null}
