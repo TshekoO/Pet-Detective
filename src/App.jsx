@@ -344,6 +344,7 @@ function App() {
   const attempts = petEntries.reduce((total, entry) => {
     return total + Number(Boolean(resultsByPet[entry.id]))
   }, 0)
+  const isGameComplete = attempts === petEntries.length
 
   const rankedLeaderboard = [...leaderboard]
     .filter((entry) => entry.name.toLowerCase() !== ADMIN_NAME.toLowerCase())
@@ -524,16 +525,10 @@ function App() {
     }
   }
 
-  function handleSelection(entryId, value) {
-    setPreviewChoices((current) => ({ ...current, [entryId]: value }))
-  }
-
   async function handleConfirmSelection() {
-    const selectedFamily = previewChoices[currentPet.id]
+    const selectedFamily = currentFamilySlide.name
 
-    if (!selectedFamily) {
-      return
-    }
+    setPreviewChoices((current) => ({ ...current, [currentPet.id]: selectedFamily }))
 
     const isCorrect = selectedFamily === currentPet.answer
 
@@ -828,7 +823,7 @@ function App() {
           <ol>
             <li>Read each numbered clue and look at the matching pet photo.</li>
             <li>Select who you think owns each pet.</li>
-            <li>Check your answers and compare your score with others.</li>
+            <li>Make sure you match the pets and families as quickly as you can.</li>
           </ol>
         </article>
 
@@ -907,14 +902,6 @@ function App() {
                       />
                     ))}
                   </div>
-
-                  <button
-                    type="button"
-                    className="secondary pick-family-button"
-                    onClick={() => handleSelection(currentPet.id, currentFamilySlide.name)}
-                  >
-                    Select {currentFamilySlide.name}
-                  </button>
                 </aside>
               </div>
 
@@ -924,7 +911,6 @@ function App() {
                 type="button"
                 className="confirm-button"
                 onClick={handleConfirmSelection}
-                disabled={!previewChoices[currentPet.id]}
               >
                 Confirm selection
               </button>
@@ -980,7 +966,7 @@ function App() {
             </div>
           </div>
           <p className="score-line">
-            Score: {score} / {petEntries.length}
+            {isGameComplete ? `Score: ${score} / ${petEntries.length}` : 'Score will be revealed when you finish.'}
           </p>
         </article>
       </section>
@@ -990,6 +976,11 @@ function App() {
           Remember, there is a prize to be won and the satisfaction of being crowned
           <span> Pet Detective.</span>
         </p>
+        {isGameComplete ? (
+          <p className="sync-note" role="status" aria-live="polite">
+            You finished the game. Final score: {score} / {petEntries.length}.
+          </p>
+        ) : null}
         {isSaving ? <p className="sync-note">Saving your score...</p> : null}
         {syncError ? <p className="sync-error">{syncError}</p> : null}
       </section>
