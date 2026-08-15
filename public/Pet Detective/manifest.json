@@ -1,0 +1,80 @@
+{
+  "game": "Pet Detective",
+  "convention": {
+    "family": "family.<ext>",
+    "pet": "pet.<ext>",
+    "unclassifiedFolder": "unclassified"
+  },
+  "players": [
+    {
+      "name": "Cilliers",
+      "family": null,
+      "pet": null,
+      "unclassified": [
+        "/Pet Detective/Cilliers/unclassified/Cilliers.jpg"
+      ]
+    },
+    {
+      "name": "Eugenie",
+      "family": "/Pet Detective/Eugenie/family.jpeg",
+      "pet": "/Pet Detective/Eugenie/pet.jpeg",
+      "unclassified": []
+    },
+    {
+      "name": "Frans",
+      "family": "/Pet Detective/Frans/family.jpeg",
+      "pet": "/Pet Detective/Frans/pet.jpeg",
+      "unclassified": []
+    },
+    {
+      "name": "Jacqui",
+      "family": "/Pet Detective/Jacqui/family.jpeg",
+      "pet": "/Pet Detective/Jacqui/pet.jpeg",
+      "unclassified": []
+    },
+    {
+      "name": "Jaron",
+      "family": "/Pet Detective/Jaron/family.jpg",
+      "pet": "/Pet Detective/Jaron/pet.jpg",
+      "unclassified": []
+    },
+    {
+      "name": "Leonie",
+      "family": "/Pet Detective/Leonie/family.jpg",
+      "pet": "/Pet Detective/Leonie/pet.jpg",
+      "unclassified": []
+    },
+    {
+      "name": "Marli",
+      "family": "/Pet Detective/Marli/family.jpg",
+      "pet": "/Pet Detective/Marli/pet.jpg",
+      "unclassified": [
+        "/Pet Detective/Marli/unclassified/20260722_191726.jpg"
+      ]
+    },
+    {
+      "name": "Oelof",
+      "family": "/Pet Detective/Oelof/family.jpeg",
+      "pet": "/Pet Detective/Oelof/pet.png",
+      "unclassified": []
+    },
+    {
+      "name": "Ogotlhe",
+      "family": "/Pet Detective/Ogotlhe/family.jpg",
+      "pet": null,
+      "unclassified": []
+    },
+    {
+      "name": "Sherilise",
+      "family": "/Pet Detective/Sherilise/family.jpeg",
+      "pet": "/Pet Detective/Sherilise/pet.jpeg",
+      "unclassified": []
+    },
+    {
+      "name": "Stefanie",
+      "family": "/Pet Detective/Stefanie/family.jpeg",
+      "pet": "/Pet Detective/Stefanie/pet.jpeg",
+      "unclassified": []
+    }
+  ]
+}

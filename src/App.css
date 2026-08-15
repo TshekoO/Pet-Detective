@@ -376,14 +376,14 @@
 }
 
 .pet-jump-list .dot {
-  width: 32px;
-  height: 32px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   border: 1px solid #b9cbdf;
-  color: #29405a;
+  color: transparent;
   background: #ffffff;
   cursor: pointer;
-  font-weight: 700;
+  padding: 0;
 }
 
 .pet-jump-list .dot.active {
@@ -442,6 +442,33 @@
 .pet-card:hover .pet-media img {
   animation-play-state: paused;
   transform: scale(1.03);
+}
+
+.fun-fact-card {
+  height: 100%;
+  display: grid;
+  align-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background:
+    linear-gradient(155deg, rgba(13, 89, 136, 0.12), rgba(255, 255, 255, 0.95)),
+    radial-gradient(circle at 88% 12%, rgba(13, 89, 136, 0.24), transparent 38%);
+}
+
+.fun-fact-kicker {
+  margin: 0;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #0d5988;
+  font-weight: 800;
+}
+
+.fun-fact-text {
+  margin: 0;
+  color: #1f3752;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
 .pet-clue {
@@ -616,22 +643,21 @@
 .result-chip {
   margin-top: 0.65rem;
   display: inline-block;
-  padding: 0.33rem 0.72rem;
+  padding: 0.28rem 0.64rem;
   border-radius: 999px;
-  font-size: 0.83rem;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  font-weight: 700;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  font-weight: 600;
 }
 
 .result-chip.correct {
-  color: #0e5f43;
-  background: #dcf4ea;
+  color: #2f5a49;
+  background: #eaf4ef;
 }
 
 .result-chip.wrong {
-  color: #8e2c2c;
-  background: #fde8e8;
+  color: #6c4a4a;
+  background: #f7eded;
 }
 
 .selection-count {

@@ -11,6 +11,66 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 const IS_SUPABASE_CONFIGURED = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY)
 const supabase = IS_SUPABASE_CONFIGURED ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null
 
+const EMPLOYEE_DIRECTORY_ASSETS = [
+  {
+    name: 'Cilliers',
+    familyImage: '/Pet Detective/Cilliers/unclassified/Cilliers.jpg',
+    petImage: null,
+    funFact: 'Can map a full project plan before the first coffee is finished.',
+  },
+  {
+    name: 'Eugenie',
+    familyImage: '/Pet Detective/Eugenie/family.jpeg',
+    petImage: '/Pet Detective/Eugenie/pet.jpeg',
+  },
+  {
+    name: 'Frans',
+    familyImage: '/Pet Detective/Frans/family.jpeg',
+    petImage: '/Pet Detective/Frans/pet.jpeg',
+  },
+  {
+    name: 'Jacqui',
+    familyImage: '/Pet Detective/Jacqui/family.jpeg',
+    petImage: '/Pet Detective/Jacqui/pet.jpeg',
+  },
+  {
+    name: 'Jaron',
+    familyImage: '/Pet Detective/Jaron/family.jpg',
+    petImage: '/Pet Detective/Jaron/pet.jpg',
+  },
+  {
+    name: 'Leonie',
+    familyImage: '/Pet Detective/Leonie/family.jpg',
+    petImage: '/Pet Detective/Leonie/pet.jpg',
+  },
+  {
+    name: 'Marli',
+    familyImage: '/Pet Detective/Marli/family.jpg',
+    petImage: '/Pet Detective/Marli/pet.jpg',
+  },
+  {
+    name: 'Oelof',
+    familyImage: '/Pet Detective/Oelof/family.jpeg',
+    petImage: '/Pet Detective/Oelof/pet.png',
+  },
+  {
+    name: 'Ogotlhe',
+    familyImage: '/Pet Detective/Ogotlhe/family.jpg',
+    petImage: null,
+    funFact: 'Can turn a stressful day into laughs in just a few minutes.',
+  },
+  {
+    name: 'Sherilise',
+    familyImage: '/Pet Detective/Sherilise/family.jpeg',
+    petImage: '/Pet Detective/Sherilise/pet.jpeg',
+  },
+  {
+    name: 'Stefanie',
+    familyImage: '/Pet Detective/Stefanie/family.jpeg',
+    petImage: '/Pet Detective/Stefanie/pet.jpeg',
+  },
+]
+
 function mapSessionForUi(session) {
   const startedAtMs = session.started_at ? Date.parse(session.started_at) : null
   const completedAtMs = session.completed_at ? Date.parse(session.completed_at) : null
@@ -221,28 +281,7 @@ function App() {
   const [syncError, setSyncError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
-  const employeeNames = [
-    'Mpho Family',
-    'Kagiso Family',
-    'Dineo Family',
-    'Thato Family',
-    'Lerato Family',
-    'Neo Family',
-    'Palesa Family',
-    'Tumelo Family',
-    'Naledi Family',
-    'Boitumelo Family',
-    'Lesego Family',
-    'Tshepo Family',
-    'Karabo Family',
-    'Refilwe Family',
-    'Katlego Family',
-    'Keitumetse Family',
-    'Onthatile Family',
-    'Ayanda Family',
-    'Lungile Family',
-    'Siyabonga Family',
-  ]
+  const employeeNames = EMPLOYEE_DIRECTORY_ASSETS.map((entry) => entry.name)
 
   const habits = [
     'hide in the kitchen when thunder starts',
@@ -263,24 +302,25 @@ function App() {
   const petEntries = employeeNames.map((name, index) => {
     const habit = habits[index % habits.length]
     const snack = snacks[index % snacks.length]
+    const employeeAsset = EMPLOYEE_DIRECTORY_ASSETS[index]
+    const hasPetPhoto = Boolean(employeeAsset.petImage)
 
     return {
       id: index + 1,
-      clue: `We both ${habit}, and we both refuse to share ${snack}.`,
+      clue: hasPetPhoto
+        ? `We both ${habit}, and we both refuse to share ${snack}.`
+        : `Fun fact: ${employeeAsset.funFact}`,
       answer: name,
-      image: `/placeholders/pet-${(index % 4) + 1}.svg`,
+      image: hasPetPhoto ? employeeAsset.petImage : null,
+      funFact: employeeAsset.funFact ?? '',
+      hasPetPhoto,
     }
   })
 
   const playerOptions = employeeNames.map((name, index) => ({
     name,
     tone: `tone-${(index % 4) + 1}`,
-    image: [
-      '/placeholders/family-mpho.svg',
-      '/placeholders/family-kagiso.svg',
-      '/placeholders/family-dineo.svg',
-      '/placeholders/family-thato.svg',
-    ][index % 4],
+    image: EMPLOYEE_DIRECTORY_ASSETS[index].familyImage,
   }))
 
   const [previewChoices, setPreviewChoices] = useState(() =>
@@ -807,7 +847,14 @@ function App() {
             <article className="pet-card" key={currentPet.id}>
               <div className="pet-and-family-layout">
                 <div className="pet-media">
-                  <img src={currentPet.image} alt={`Placeholder for pet ${currentPet.id}`} />
+                  {currentPet.hasPetPhoto ? (
+                    <img src={currentPet.image} alt={`Pet photo for ${currentPet.answer}`} />
+                  ) : (
+                    <div className="fun-fact-card" role="note" aria-label="Fun fact">
+                      <p className="fun-fact-kicker">Fun Fact</p>
+                      <p className="fun-fact-text">{currentPet.funFact}</p>
+                    </div>
+                  )}
                 </div>
 
                 <aside className="family-carousel-panel" aria-label="Family image carousel">
@@ -888,7 +935,7 @@ function App() {
                     resultsByPet[currentPet.id] === 'correct' ? 'result-chip correct' : 'result-chip wrong'
                   }
                 >
-                  {resultsByPet[currentPet.id] === 'correct' ? 'Answer Correct' : 'Oh Incorrect'}
+                  Selection saved
                 </p>
               ) : null}
             </article>
@@ -928,9 +975,7 @@ function App() {
                   className={index === currentPetIndex ? 'dot active' : 'dot'}
                   onClick={() => setCurrentPetIndex(index)}
                   aria-label={`Open pet ${entry.id}`}
-                >
-                  {entry.id}
-                </button>
+                />
               ))}
             </div>
           </div>
